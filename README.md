@@ -130,3 +130,75 @@ To check Kibana is working
 	systemctl status kibana
 	netstat -atlnp
 
+**Nginx :**
+
+	lxc init Ubuntu-LTS Nginx
+
+Attach ELK0 network to Nginx continer
+
+	lxc network attach ELK0 Nginx eth0
+
+Assign static IP to Nginx container
+
+	lxc config device set Nginx eth0 ipv4.address 10.80.3.5
+
+Start Nginx container
+
+	lxc start Nginx
+
+Login Nginx container
+
+	lxc exec Nginx bash
+
+Install Nginx in Nginx container
+
+	apt-get update
+	apt-get install -y nginx apache2-utils
+
+Set the password for Kibana Admin
+
+	htpasswd -c /etc/nginx/htpasswd.users kibanaadmin
+
+Remove the default Nginx configuration
+
+	rm -rf /etc/nginx/sites-available/default
+
+Copy paste the following
+
+	vi /etc/nginx/sites-available/default
+	server {
+
+	listen 80;
+
+	server_name example.com;
+
+	auth_basic "Restricted Access";
+
+	auth_basic_user_file /etc/nginx/htpasswd.users;
+
+  	location / {
+
+    proxy_pass http://10.80.3.35:5601;
+
+    proxy_http_version 1.1;
+
+    proxy_set_header Upgrade $http_upgrade;
+
+    proxy_set_header Connection 'upgrade';
+
+    proxy_set_header Host $host;
+
+    proxy_cache_bypass $http_upgrade;    
+
+  	}
+
+	}
+
+Start / Enable Nginx service
+
+	systemctl restart nginx
+	systemctl enable nginx
+
+To check Nginx service
+
+	systemctl status nginx
