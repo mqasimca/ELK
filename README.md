@@ -35,7 +35,7 @@ Download Ubuntu LTS 16.04 image
 
     lxc image copy images:ubuntu/xenial/amd64 local: --alias=Ubuntu-LTS --copy-aliases --auto-update
 
-ElasticSearch :
+**ElasticSearch :**
 
 	lxc init Ubuntu-LTS ElasticSearch
 
@@ -76,10 +76,57 @@ Install ElasticSearch
 	apt-get update
 	apt-get -y install elasticsearch
 	echo "network.host: [_eth0_]" >> /etc/elasticsearch/elasticsearch.yml
+
+Start / Enable Elasticsearch service
+
 	systemctl restart elasticsearch
 	systemctl enable elasticsearch
-	systemctl status elasticsearch
+	
 
 To check ElasticSearch is working
 
+	systemctl status elasticsearch
 	netstat -atlnp
+
+**Kibana :**
+
+	lxc init Ubuntu-LTS Kibana
+
+Attch ELK0 network to Kibana network
+
+	lxc network attach ELK0 Kibana eth0
+
+Assign static IP to Kibana container
+
+	lxc config device set Kibana eth0 ipv4.address 10.80.3.35
+
+Start Kibana container
+
+	lxc start Kibana
+
+Login Kibana container
+
+	lxc exec Kibana bash
+
+Install necessary packages
+
+	apt-get update
+	apt-get install python-software-properties software-properties-common wget -y
+
+Install Kibana
+
+	wget -qO - https://packages.elastic.co/GPG-KEY-elasticsearch | sudo apt-key add -
+	echo "deb http://packages.elastic.co/kibana/4.4/debian stable main" > /etc/apt/sources.list.d/kibana-4.4.x.list
+	apt-get update
+	apt-get -y install kibana --allow-unauthenticated
+
+Start / Enable Kibana service
+
+	systemctl restart kibana
+	systemctl enable kibana
+
+To check Kibana is working
+
+	systemctl status kibana
+	netstat -atlnp
+
