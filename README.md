@@ -168,30 +168,22 @@ Copy paste the following
 	vi /etc/nginx/sites-available/default
 	server {
 
-	listen 80;
+	server {
+    listen 80;
 
-	server_name example.com;
+    server_name example.com;
 
-	auth_basic "Restricted Access";
+    auth_basic "Restricted Access";
+    auth_basic_user_file /etc/nginx/htpasswd.users;
 
-	auth_basic_user_file /etc/nginx/htpasswd.users;
-
-  	location / {
-
-    proxy_pass http://10.80.3.35:5601;
-
-    proxy_http_version 1.1;
-
-    proxy_set_header Upgrade $http_upgrade;
-
-    proxy_set_header Connection 'upgrade';
-
-    proxy_set_header Host $host;
-
-    proxy_cache_bypass $http_upgrade;    
-
-  	}
-
+    location / {
+        proxy_pass http://localhost:5601;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;        
+    		}
 	}
 
 Start / Enable Nginx service
@@ -202,3 +194,91 @@ Start / Enable Nginx service
 To check Nginx service
 
 	systemctl status nginx
+
+**Logstash :**
+
+	lxc init Ubuntu-LTS LogStash
+	lxc network attach ELK0 LogStash eth0
+	lxc config device set LogStash eth0 ipv4.address 10.80.3.50
+
+Start LogStash container
+
+	lxc start LogStash
+
+Login LogStash container
+
+	lxc exec LogStash bash
+
+Install necessary packages
+
+	apt-get install python-software-properties software-properties-common wget -y
+	add-apt-repository -y ppa:webupd8team/java -y && apt-get update
+	apt-get -y install oracle-java8-installer
+
+Installing Logstash
+
+	echo 'deb http://packages.elastic.co/logstash/2.2/debian stable main' > /etc/apt/sources.list.d/logstash-2.2.x.list
+	apt-get update
+	apt-get install logstash --allow-unauthenticated
+
+Configure Logstash
+
+	vi /etc/logstash/conf.d/02-beats-input.conf
+	
+Copy paste the following
+
+	input {
+ 	beats {
+    port => 5044
+  	}
+	}
+
+Now create a configuration file called 10-syslog-filter.conf, where we will add a filter for syslog
+
+	vi /etc/logstash/conf.d/10-syslog-filter.conf
+
+Copy paste the following
+
+	filter {
+  	if [type] == "syslog" {
+    grok {
+      match => { "message" => "%{SYSLOGTIMESTAMP:syslog_timestamp} %{SYSLOGHOST:syslog_hostname} %{DATA:syslog_program}(?:\[%{POSINT:syslog_pid}\])?: %{GREEDYDATA:syslog_message}" }
+      add_field => [ "received_at", "%{@timestamp}" ]
+      add_field => [ "received_from", "%{host}" ]
+    }
+    syslog_pri { }
+    date {
+      match => [ "syslog_timestamp", "MMM  d HH:mm:ss", "MMM dd HH:mm:ss" ]
+    }
+  	}
+	}
+
+Lastly, create a configuration file called 30-elasticsearch-output.conf
+
+	vi /etc/logstash/conf.d/30-elasticsearch-output.conf
+
+Copy paste the following
+
+	output {
+  	elasticsearch {
+    hosts => ["10.80.3.25:9200"]
+    sniffing => true
+    manage_template => false
+    index => "%{[@metadata][beat]}-%{+YYYY.MM.dd}"
+    document_type => "%{[@metadata][type]}"
+  	}
+	}
+
+Test your Logstash configuration
+
+	service logstash configtest
+
+Start / Enable LogStash
+
+	systemctl start logstash
+	systemctl enable logstash
+
+To check LogStash service
+
+	systemctl status logstash
+	netstat -atlnp
