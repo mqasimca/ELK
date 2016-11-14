@@ -282,3 +282,17 @@ To check LogStash service
 
 	systemctl status logstash
 	netstat -atlnp
+
+**Load Kibana Dashboards**
+
+	apt-get -y install unzip curl
+	curl -L -O https://download.elastic.co/beats/dashboards/beats-dashboards-1.1.0.zip
+	unzip beats-dashboards-*.zip
+	cd beats-dashboards-*
+	./load.sh -url http://10.80.3.25:9200
+
+**Load Filebeat Index Template in Elasticsearch**
+
+	curl -O https://gist.githubusercontent.com/thisismitch/3429023e8438cc25b86c/raw/d8c479e2a1adcea8b1fe86570e42abab0f10f364/filebeat-index-template.json
+	curl -XPUT 'http://10.80.3.25:9200/_template/filebeat?pretty' -d@filebeat-index-template.json
+
