@@ -4,7 +4,7 @@ Centralized logging can be very useful when attempting to identify problems with
 
 ### ELK stack consists of the following
 
-###  Logstash: 
+###  Logstash:
 
 The server component of Logstash that processes incoming logs
 
@@ -21,10 +21,10 @@ Web interface for searching and visualizing logs, which will be proxied through 
 Installed on client servers that will send their logs to Logstash, Filebeat serves as a log shipping agent that utilizes the lumberjack networking protocol to communicate with Logstash
 
 
-### Requirement 
+### Requirement
 
  LXD Setup
- 
+
 ## Installation
 
 Create ELK network (Optional)   
@@ -81,7 +81,7 @@ Start / Enable Elasticsearch service
 
 	systemctl restart elasticsearch
 	systemctl enable elasticsearch
-	
+
 
 To check ElasticSearch is working
 
@@ -224,7 +224,7 @@ Installing Logstash
 Configure Logstash
 
 	vi /etc/logstash/conf.d/02-beats-input.conf
-	
+
 Copy paste the following
 
 	input {
@@ -296,3 +296,41 @@ To check LogStash service
 	curl -O https://gist.githubusercontent.com/thisismitch/3429023e8438cc25b86c/raw/d8c479e2a1adcea8b1fe86570e42abab0f10f364/filebeat-index-template.json
 	curl -XPUT 'http://10.80.3.25:9200/_template/filebeat?pretty' -d@filebeat-index-template.json
 
+### Set Up Filebeat (Add Client Servers)
+
+**Install Filebeat Package**
+
+    echo "deb https://packages.elastic.co/beats/apt stable main" |  sudo tee -a /etc/apt/sources.list.d/beats.list
+    wget -qO - https://packages.elastic.co/GPG-KEY-elasticsearch | sudo apt-key add -
+    sudo apt-get update
+    sudo apt-get install filebeat
+
+**Configure Filebeat**
+
+    sudo vi /etc/filebeat/filebeat.yml
+    paths:
+        - /var/log/auth.log
+        - /var/log/syslog
+        #- /var/log/*.log
+
+Then find the line that specifies document_type:, uncomment it and change its value to "syslog". It should look like this after the modification:
+
+    document_type: syslog
+
+Configure ELK server
+
+    ### Logstash as output
+    logstash:
+    # The Logstash hosts
+    hosts: ["ELK_server_IP:5044"]
+    bulk_max_size: 1024
+
+Start / Enable Filebeat
+
+	systemctl start filebeat
+	systemctl enable filebeat
+
+To check Filebeat service
+
+	systemctl status filebeat
+	netstat -atlnp
